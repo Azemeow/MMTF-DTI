@@ -173,16 +173,10 @@ class CrossDomainTrainer:
             weight_decay=1e-5
         )
 
-        # self.curriculum = [
-        #     (15, 0.1, 0.05),
-        #     (25, 0.4, 0.2),
-        #     (float('inf'), 0.6, 0.3)
-        # ]
         self.curriculum = [
-            (6, 0.05, 0.02),     # 前5轮：轻度域适应
-            (6, 0.2, 0.1),     # 5-15轮：中度域适应
-            (9, 0.4, 0.2),     # 15-30轮：强域适应
-            (float('inf'), 0.5, 0.25)  # 30轮后：最强域适应
+            (25, 0.1, 0.05),
+            (50, 0.4, 0.2),
+            (float('inf'), 0.6, 0.3)
         ]
 
         self._target_iter = None
@@ -602,3 +596,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
