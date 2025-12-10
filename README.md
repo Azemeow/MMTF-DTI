@@ -29,7 +29,7 @@ Multi-Modal Transformer Fusion for Drug-Target Interaction Prediction
    ESM_PATH = 'esm2_t12_35M_UR50D'
 
 3. Run preprocessing:
-4. 
+
 ```python
 datapre.py
 ```
