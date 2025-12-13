@@ -21,7 +21,7 @@ def set_seed(seed=2025):
 
 
 class AdamW(th.optim.Optimizer):
-    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-4, warmup=0):
+    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0, warmup=0):
         defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, warmup=warmup)
         super(AdamW, self).__init__(params, defaults)
 
@@ -174,10 +174,16 @@ class CrossDomainTrainer:
         )
 
         self.curriculum = [
-            (25, 0.1, 0.05),
-            (50, 0.4, 0.2),
+            (10, 0.1, 0.05),
+            (20, 0.4, 0.2),
             (float('inf'), 0.6, 0.3)
         ]
+        # self.curriculum = [
+        #     (3 , 0.05, 0.02),     # 前5轮：轻度域适应
+        #     (6, 0.2, 0.1),     # 5-15轮：中度域适应
+        #     (9, 0.4, 0.2),     # 15-30轮：强域适应
+        #     (float('inf'), 0.5, 0.25)  # 30轮后：最强域适应
+        # ]
 
         self._target_iter = None
 
@@ -469,33 +475,33 @@ def main():
     print(f"Using device: {device}")
 
     # Data paths
-    bindingdb_dir = Path('./data/BindingDB/data_split/')
-    drugbank_dir = Path('./data/DrugBank/data_split/')
-    human_dir = Path('./data/Human/data_split/')
-    celegans_dir = Path('./data/Celegans/data_split/')
-    best_model_dir = Path('./models/Bestmodel/')
+    bindingdb_dir = Path('D:/研究生/论文代码/AttentionSiteDTI-main - 3/myDTI/data/BindingDB/data_split/')
+    drugbank_dir = Path('D:/研究生/论文代码/AttentionSiteDTI-main - 3/myDTI/data/DrugBank/data_split/')
+    human_dir = Path('D:/研究生/论文代码/AttentionSiteDTI-main - 3/myDTI/data/Human/data_split/')
+    celegans_dir = Path('D:/研究生/论文代码/AttentionSiteDTI-main - 3/myDTI/data/Celegans/data_split/')
+    best_model_dir = Path('D:/models/Bestmodel/')
 
     # Source domain files
     source_data_files = {
         'train': {
             'bindingdb': bindingdb_dir / 'processed_data_train_bindingdb.pkl',
             'drugbank': drugbank_dir / 'processed_data_train_drugbank.pkl',
-            'celegans': celegans_dir / 'processed_data_train_celegans.pkl'
+            'human': human_dir / 'processed_data_train_human.pkl'
         },
         'val': {
             'bindingdb': bindingdb_dir / 'processed_data_val_bindingdb.pkl',
             'drugbank': drugbank_dir / 'processed_data_val_drugbank.pkl',
-            'celegans': celegans_dir / 'processed_data_val_celegans.pkl'
+            'human': human_dir / 'processed_data_val_human.pkl'
         }
     }
 
     # Target domain files
     target_data_files = {
-        'train': human_dir / 'processed_data_train_human.pkl',
-        'test': human_dir / 'processed_data_test_human.pkl'
+        'train': celegans_dir / 'processed_data_train_celegans.pkl',
+        'test': celegans_dir / 'processed_data_test_celegans.pkl'
     }
 
-    source_domains = ['bindingdb', 'drugbank', 'celegans']
+    source_domains = ['bindingdb', 'drugbank', 'human']
     source_data = {
         'train': {domain: [] for domain in source_domains},
         'val': {domain: [] for domain in source_domains}
@@ -514,26 +520,26 @@ def main():
     print("\nLoading target domain data...")
     target_train_data = load_pickle(target_data_files['train'])
     target_test_data = load_pickle(target_data_files['test'])
-    print(f"  Human train (unlabeled for alignment): {len(target_train_data)} samples")
-    print(f"  Human test (final evaluation): {len(target_test_data)} samples")
+    print(f"  celegans train (unlabeled for alignment): {len(target_train_data)} samples")
+    print(f"  celegans test (final evaluation): {len(target_test_data)} samples")
 
     # Verify no data leakage
     print("\nVerifying data separation...")
     verify_no_data_leakage(target_train_data, target_test_data)
 
-    batch_size = 128
+    batch_size = 16
 
     # Source domain DataLoaders
     source_train_loaders = [
         create_dataloader(source_data['train']['bindingdb'], batch_size),
         create_dataloader(source_data['train']['drugbank'], batch_size),
-        create_dataloader(source_data['train']['celegans'], batch_size)
+        create_dataloader(source_data['train']['human'], batch_size)
     ]
 
     source_val_loaders = [
         create_dataloader(source_data['val']['bindingdb'], batch_size, shuffle=False),
         create_dataloader(source_data['val']['drugbank'], batch_size, shuffle=False),
-        create_dataloader(source_data['val']['celegans'], batch_size, shuffle=False)
+        create_dataloader(source_data['val']['human'], batch_size, shuffle=False)
     ]
 
     # Target domain DataLoaders
@@ -555,14 +561,14 @@ def main():
 
     evaluator = ModelEvaluator(model, nn.BCEWithLogitsLoss(pos_weight=pos_weight))
 
-    config = {'lr': 5e-4}
+    config = {'lr': 1e-4}
     trainer = CrossDomainTrainer(
         model=model,
         sources=source_train_loaders,
         target_unlabeled_loader=target_train_loader,
         val_loaders=source_val_loaders,
         config=config,
-        patience=10
+        patience=15
     )
     best_model_dir.mkdir(parents=True, exist_ok=True)
 
@@ -573,7 +579,7 @@ def main():
     print("Target: Human train (unlabeled for alignment)")
     print("=" * 60)
 
-    for epoch in range(1, 101):
+    for epoch in range(1, 31):
         early_stop = trainer.train_epoch(epoch)
         if early_stop:
             break
@@ -596,4 +602,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
