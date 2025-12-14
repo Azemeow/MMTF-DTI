@@ -178,12 +178,6 @@ class CrossDomainTrainer:
             (20, 0.4, 0.2),
             (float('inf'), 0.6, 0.3)
         ]
-        # self.curriculum = [
-        #     (3 , 0.05, 0.02),     # 前5轮：轻度域适应
-        #     (6, 0.2, 0.1),     # 5-15轮：中度域适应
-        #     (9, 0.4, 0.2),     # 15-30轮：强域适应
-        #     (float('inf'), 0.5, 0.25)  # 30轮后：最强域适应
-        # ]
 
         self._target_iter = None
 
@@ -457,15 +451,6 @@ def verify_no_data_leakage(target_train_data, target_test_data):
 
     train_pairs = extract_pairs(target_train_data)
     test_pairs = extract_pairs(target_test_data)
-    overlap = train_pairs & test_pairs
-
-    if len(overlap) > 0:
-        print(f"WARNING: Found {len(overlap)} overlapping samples between target train and test!")
-        return False
-    else:
-        print(f"No overlap between target train ({len(train_pairs)}) and test ({len(test_pairs)}) sets")
-        return True
-
 
 def main():
     set_seed(2025)
@@ -475,11 +460,11 @@ def main():
     print(f"Using device: {device}")
 
     # Data paths
-    bindingdb_dir = Path('D:/研究生/论文代码/AttentionSiteDTI-main - 3/myDTI/data/BindingDB/data_split/')
-    drugbank_dir = Path('D:/研究生/论文代码/AttentionSiteDTI-main - 3/myDTI/data/DrugBank/data_split/')
-    human_dir = Path('D:/研究生/论文代码/AttentionSiteDTI-main - 3/myDTI/data/Human/data_split/')
-    celegans_dir = Path('D:/研究生/论文代码/AttentionSiteDTI-main - 3/myDTI/data/Celegans/data_split/')
-    best_model_dir = Path('D:/models/Bestmodel/')
+    bindingdb_dir = Path('./data/BindingDB/data_split/')
+    drugbank_dir = Path('./data/DrugBank/data_split/')
+    human_dir = Path('./data/Human/data_split/')
+    celegans_dir = Path('./data/Celegans/data_split/')
+    best_model_dir = Path('./models/Bestmodel/')
 
     # Source domain files
     source_data_files = {
@@ -602,3 +587,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
